@@ -1,0 +1,8 @@
+outputPath: lib/model/
+dbSchema: public
+database:
+  username: postgres
+  password: postgres
+  host: localhost
+  port: 5432
+  databaseName: orm_test
