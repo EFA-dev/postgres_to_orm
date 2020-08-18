@@ -1,4 +1,4 @@
-outputPath: lib/model/
+outputPath: lib/model
 dbSchema: public
 database:
   username: postgres

@@ -8,7 +8,7 @@ environment:
 dependencies:
   path: ^1.7.0
   args: ^1.6.0
-  safe_config: ^2.0.2
+  safe_config: ^3.0.0-b2
   postgres: ^2.1.1
   logging: ^0.11.4
   io: ^0.3.4
@@ -16,8 +16,9 @@ dependencies:
   recase: ^3.0.0
   dart_style: ^1.3.6
   inflection2: ^0.4.3
+  meta: ^1.2.2
+  yaml: ^2.2.1
 
 dev_dependencies:
   pedantic: ^1.9.0
   test: ^1.14.4
-

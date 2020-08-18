@@ -1,3 +1,7 @@
-int calculate() {
-  return 6 * 7;
-}
+library postgres_to_orm_example;
+
+export 'dart:async';
+export 'dart:io';
+
+export 'package:aqueduct/aqueduct.dart';
+export 'package:aqueduct/managed_auth.dart';

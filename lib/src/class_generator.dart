@@ -1,35 +1,51 @@
 import 'package:code_builder/code_builder.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:logging/logging.dart';
+import 'package:meta/meta.dart';
+import 'package:postgres_to_orm/models/managed_object_set.dart';
+import 'package:postgres_to_orm/models/model_class_set.dart';
 import 'package:postgres_to_orm/models/table.dart';
+import 'package:postgres_to_orm/src/build_configuration.dart';
 
 class ClassGenerator {
-  static List<String> generateManagedObjectClass(List<Table> tableList) {
-    var managedObjectList = <String>[];
+  final BuildConfiguration config;
+  final List<Table> tableList;
+
+  ClassGenerator({
+    @required this.config,
+    @required this.tableList,
+  });
+
+  List<ManagedObjectSet> generateManagedObjectClass() {
+    var managedObjectList = <ManagedObjectSet>[];
     for (var table in tableList) {
-      Logger.root.info('*** Processing: ${table.managedObjectName} ***');
+      // Logger.root.info('~~~ Processing: ${table.managedObjectName}');
 
       final managedObject = Class((builder) {
-        return builder
+        var clasbuilder = builder
           ..name = table.managedObjectName
           ..extend = refer('ManagedObject<${table.modelName}>')
           ..implements.add(refer(table.modelName));
+
+        return clasbuilder;
       });
 
       final emitter = DartEmitter();
       final formated = DartFormatter().format('${managedObject.accept(emitter)}');
-      managedObjectList.add(formated);
+      managedObjectList.add(ManagedObjectSet(table.name, formated));
 
-      Logger.root.info('*** Completed: ${table.managedObjectName} ***');
+      Logger.root.info('~~~ Completed: ${table.managedObjectName}');
     }
 
     return managedObjectList;
   }
 
-  static Future<List<String>> generateModelClass(List<Table> tableList) async {
-    var modelClassList = <String>[];
+  Future<List<ModelClassSet>> generateModelClass() async {
+    var modelClassList = <ModelClassSet>[];
 
     for (var table in tableList) {
+      // Logger.root.info('~~~ Processing: ${table.modelName}');
+
       var fieldList = <Field>[];
 
       //* Columns
@@ -87,8 +103,8 @@ class ClassGenerator {
 
       final emitter = DartEmitter();
       final formated = DartFormatter().format('${model.accept(emitter)}');
-      Logger.root.info(formated);
-      modelClassList.add(formated);
+      modelClassList.add(ModelClassSet(table.name, formated));
+      Logger.root.info('~~~ Completed: ${table.modelName}');
     }
 
     return modelClassList;

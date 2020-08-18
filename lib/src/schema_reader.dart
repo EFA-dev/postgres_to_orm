@@ -36,12 +36,12 @@ class SchemaReader {
       table.columnList = columnList;
     }
 
-    //Releations
+    //* Table Releations
     for (var table in tableList) {
-      //* Primary Key
       var constraintList = await getTableConstrints(table.name);
       var foreignTableConstraintList = await getTableConstrints(table.name, forTable: false);
 
+      //* Primary Key Constraint
       var primaryKeyConstraint = constraintList.firstWhere((element) => element.isPrimaryKey);
       if (primaryKeyConstraint != null) {
         table.columnList.firstWhere((element) => element.name == primaryKeyConstraint.columnName).primaryKey = true;
@@ -55,15 +55,18 @@ class SchemaReader {
           table.managedSetList.add(ManagedSet(
             typeName: ReCase(foreignTableConstraint.tableName).pascalCase,
             name: pluralize(ReCase(foreignTableConstraint.columnName).camelCase.replaceFirst('_', '')),
+            fileName: ReCase(foreignTableConstraint.tableName).snakeCase,
           ));
         } else {
+          //* This is for one to one relation
           var checkConstraint =
               constraintList.firstWhere((element) => element.foreignTableName == foreignTableConstraint.tableName, orElse: () => null);
 
           if (checkConstraint == null) {
             table.managedSetList.add(ManagedSet(
               typeName: ReCase(foreignTableConstraint.tableName).pascalCase,
-              name: pluralize(ReCase(foreignTableConstraint.tableName.replaceFirst('_', '')).camelCase),
+              name: pluralize(ReCase(foreignTableConstraint.tableName).camelCase),
+              fileName: ReCase(foreignTableConstraint.tableName).snakeCase,
             ));
           }
         }
@@ -71,8 +74,6 @@ class SchemaReader {
 
       //* Current Table relations
       for (var constraint in constraintList) {
-        Logger.root.info(constraint.tableName);
-
         //* Self referencing
         if (constraint.tableName == constraint.foreignTableName) {
           table.relateList.add(
@@ -80,6 +81,7 @@ class SchemaReader {
               relateType: pluralize(ReCase(constraint.columnName).camelCase.replaceFirst('_', '')),
               typeName: ReCase(constraint.tableName).pascalCase,
               name: ReCase(constraint.columnName).camelCase.replaceFirst('_', ''),
+              fileName: ReCase(constraint.tableName).snakeCase,
             ),
           );
         } else {
@@ -89,12 +91,15 @@ class SchemaReader {
             orElse: () => null,
           );
 
+          var fileName = ReCase(constraint.foreignTableName).snakeCase;
+
           if (checkConstraint == null) {
             table.relateList.add(
               Relate(
                 relateType: ReCase(pluralize(table.name)).camelCase,
                 typeName: ReCase(constraint.foreignTableName).pascalCase,
                 name: constraint.foreignTableName.replaceFirst('_', ''),
+                fileName: fileName,
               ),
             );
           } else {
@@ -109,6 +114,7 @@ class SchemaReader {
                   relateType: ReCase(checkConstraint.columnName).camelCase,
                   typeName: ReCase(constraint.foreignTableName).pascalCase,
                   name: constraint.foreignTableName.replaceFirst('_', ''),
+                  fileName: fileName,
                 ),
               );
             } else {
@@ -117,6 +123,7 @@ class SchemaReader {
                   relateType: null,
                   typeName: ReCase(constraint.foreignTableName).pascalCase,
                   name: constraint.columnName.replaceFirst('_', ''),
+                  fileName: fileName,
                 ),
               );
             }

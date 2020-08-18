@@ -10,38 +10,51 @@ import 'package:postgres_to_orm/models/table.dart';
 import 'package:postgres_to_orm/src/build_configuration.dart';
 import 'package:postgres_to_orm/src/class_generator.dart';
 import 'package:postgres_to_orm/src/db_connection.dart';
+import 'package:postgres_to_orm/src/file_generator.dart';
 import 'package:postgres_to_orm/src/schema_reader.dart';
+import 'package:yaml/yaml.dart';
 
 Future<void> main(List<String> arguments) async {
+  checkArgs(arguments);
+
   var log = Logger.root;
-  log.level = Level.ALL;
-  log.onRecord.listen((record) {
-    stdout.write(colorLog(record));
-  });
 
   log.info('*** Getting settings from "config.yaml" file ***');
   var config = BuildConfiguration('./config.yaml');
-  log.info(config.dbSchema);
-  log.info(config.outputPath);
+  var fileGenerator = FileGenerator(config);
 
   var connection = await DBConnection.createConnection(config.database);
-  log.info('*** Database connection created ***');
+  var schemaReader = SchemaReader(config, connection);
 
   await connection.open();
   log.info('*** Database connection established ***');
 
+  //* Table List
   log.info('*** Tables are getting from database ***');
-  var schemaReader = SchemaReader(config, connection);
   var tableList = await schemaReader.getTables();
   log.info('*** ${tableList.length} Table received ***');
 
-  log.info('*** Creating ManagedObject classes ***');
-  var managedObjectList = ClassGenerator.generateManagedObjectClass(tableList);
-  log.info('*** ${managedObjectList.length} ManagedObject created ***');
+  var classGenerator = ClassGenerator(config: config, tableList: tableList);
 
+  //* Managed Object Class
+  log.info('*** Creating ManagedObject classes ***');
+  var managedObjectSetList = classGenerator.generateManagedObjectClass();
+  log.info('*** ${managedObjectSetList.length} ManagedObject created ***');
+
+  //* Model Object Class
   log.info('*** Creating Model classes ***');
-  var modelList = await ClassGenerator.generateModelClass(tableList);
-  log.info('*** ${modelList.length} Model Class created ***');
+  var modelClassSetList = await classGenerator.generateModelClass();
+  log.info('*** ${modelClassSetList.length} Model Class created ***');
+
+  //* Entity File
+  log.info('*** Creating Entity Files ***');
+  var saveEntityResult = await fileGenerator.generateEntityFile(
+    config: config,
+    tableList: tableList,
+    managedObjectSetList: managedObjectSetList,
+    modelClassSetList: modelClassSetList,
+  );
+  log.info('*** ${modelClassSetList.length} File created ***');
 
   await connection.close();
 }
