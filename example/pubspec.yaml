@@ -15,4 +15,4 @@ dev_dependencies:
   aqueduct_test: ^2.0.0-b1
 
   postgres_to_orm:
-    path: ../../../postgres_to_orm
+    path: ../../postgres_to_orm
