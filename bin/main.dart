@@ -13,32 +13,35 @@ import 'package:postgres_to_orm/src/db_connection.dart';
 import 'package:postgres_to_orm/src/schema_reader.dart';
 
 Future<void> main(List<String> arguments) async {
-  Logger.root.level = Level.ALL;
-  Logger.root.onRecord.listen((record) {
+  var log = Logger.root;
+  log.level = Level.ALL;
+  log.onRecord.listen((record) {
     stdout.write(colorLog(record));
   });
 
-  Logger.root.info('*** Getting settings from "config.yaml" file ***');
+  log.info('*** Getting settings from "config.yaml" file ***');
   var config = BuildConfiguration('./config.yaml');
+  log.info(config.dbSchema);
+  log.info(config.outputPath);
 
   var connection = await DBConnection.createConnection(config.database);
-  Logger.root.info('*** Database connection created ***');
+  log.info('*** Database connection created ***');
 
   await connection.open();
-  Logger.root.info('*** Database connection established ***');
+  log.info('*** Database connection established ***');
 
-  Logger.root.info('*** Tables are getting from database ***');
+  log.info('*** Tables are getting from database ***');
   var schemaReader = SchemaReader(config, connection);
   var tableList = await schemaReader.getTables();
-  Logger.root.info('*** ${tableList.length} Table received ***');
+  log.info('*** ${tableList.length} Table received ***');
 
-  Logger.root.info('*** Creating ManagedObject classes ***');
+  log.info('*** Creating ManagedObject classes ***');
   var managedObjectList = ClassGenerator.generateManagedObjectClass(tableList);
-  Logger.root.info('*** ${managedObjectList.length} ManagedObject created ***');
+  log.info('*** ${managedObjectList.length} ManagedObject created ***');
 
-  Logger.root.info('*** Creating Model classes ***');
-  var modelList = await ClassGenerator.generateModelClass(tableList, schemaReader);
-  Logger.root.info('*** ${modelList.length} Model Class created ***');
+  log.info('*** Creating Model classes ***');
+  var modelList = await ClassGenerator.generateModelClass(tableList);
+  log.info('*** ${modelList.length} Model Class created ***');
 
   await connection.close();
 }

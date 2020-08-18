@@ -48,50 +48,78 @@ class SchemaReader {
         constraintList.removeWhere((element) => element.isPrimaryKey);
       }
 
-      for (var foraignTableConstraint in foreignTableConstraintList) {
-        var checkConstraint =
-            constraintList.firstWhere((element) => element.foreignTableName == foraignTableConstraint.tableName, orElse: () => null);
-
-        if (checkConstraint == null) {
+      //* Foreign Table relations
+      for (var foreignTableConstraint in foreignTableConstraintList) {
+        //* Self referencing
+        if (foreignTableConstraint.tableName == foreignTableConstraint.foreignTableName) {
           table.managedSetList.add(ManagedSet(
-            name: pluralize(foraignTableConstraint.tableName.replaceFirst('_', '')),
-            typeName: ReCase(foraignTableConstraint.tableName).pascalCase,
+            typeName: ReCase(foreignTableConstraint.tableName).pascalCase,
+            name: pluralize(ReCase(foreignTableConstraint.columnName).camelCase.replaceFirst('_', '')),
           ));
+        } else {
+          var checkConstraint =
+              constraintList.firstWhere((element) => element.foreignTableName == foreignTableConstraint.tableName, orElse: () => null);
+
+          if (checkConstraint == null) {
+            table.managedSetList.add(ManagedSet(
+              typeName: ReCase(foreignTableConstraint.tableName).pascalCase,
+              name: pluralize(ReCase(foreignTableConstraint.tableName.replaceFirst('_', '')).camelCase),
+            ));
+          }
         }
       }
 
+      //* Current Table relations
       for (var constraint in constraintList) {
         Logger.root.info(constraint.tableName);
 
-        var checkConstraint =
-            foreignTableConstraintList.firstWhere((element) => element.foreignTableName == constraint.tableName, orElse: () => null);
-
-        if (checkConstraint == null) {
+        //* Self referencing
+        if (constraint.tableName == constraint.foreignTableName) {
           table.relateList.add(
             Relate(
-              relateType: ReCase(pluralize(table.name)).camelCase,
-              typeName: ReCase(constraint.foreignTableName).pascalCase,
-              name: constraint.foreignTableName.replaceFirst('_', ''),
+              relateType: pluralize(ReCase(constraint.columnName).camelCase.replaceFirst('_', '')),
+              typeName: ReCase(constraint.tableName).pascalCase,
+              name: ReCase(constraint.columnName).camelCase.replaceFirst('_', ''),
             ),
           );
         } else {
-          var hasConstraintColumn = table.columnList.any((element) => element.name == constraint.columnName.replaceFirst('_', ''));
-          if (hasConstraintColumn == false) {
+          //* Check is there any constraint to this table
+          var checkConstraint = foreignTableConstraintList.firstWhere(
+            (element) => element.foreignTableName == constraint.tableName,
+            orElse: () => null,
+          );
+
+          if (checkConstraint == null) {
             table.relateList.add(
               Relate(
-                relateType: ReCase(checkConstraint.columnName).camelCase,
+                relateType: ReCase(pluralize(table.name)).camelCase,
                 typeName: ReCase(constraint.foreignTableName).pascalCase,
                 name: constraint.foreignTableName.replaceFirst('_', ''),
               ),
             );
           } else {
-            table.relateList.add(
-              Relate(
-                relateType: null,
-                typeName: ReCase(constraint.foreignTableName).pascalCase,
-                name: constraint.foreignTableName.replaceFirst('_', ''),
-              ),
+            //* To check is there any column that use for foreign key constraint
+            //* This is need for one to one relation
+            var hasConstraintColumn = table.columnList.any(
+              (element) => element.name == constraint.columnName.replaceFirst('_', ''),
             );
+            if (hasConstraintColumn == false) {
+              table.relateList.add(
+                Relate(
+                  relateType: ReCase(checkConstraint.columnName).camelCase,
+                  typeName: ReCase(constraint.foreignTableName).pascalCase,
+                  name: constraint.foreignTableName.replaceFirst('_', ''),
+                ),
+              );
+            } else {
+              table.relateList.add(
+                Relate(
+                  relateType: null,
+                  typeName: ReCase(constraint.foreignTableName).pascalCase,
+                  name: constraint.columnName.replaceFirst('_', ''),
+                ),
+              );
+            }
           }
         }
 

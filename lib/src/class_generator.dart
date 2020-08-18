@@ -1,11 +1,7 @@
 import 'package:code_builder/code_builder.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:logging/logging.dart';
-import 'package:postgres/postgres.dart';
-import 'package:postgres_to_orm/models/column.dart';
 import 'package:postgres_to_orm/models/table.dart';
-import 'package:postgres_to_orm/src/build_configuration.dart';
-import 'package:postgres_to_orm/src/schema_reader.dart';
 
 class ClassGenerator {
   static List<String> generateManagedObjectClass(List<Table> tableList) {
@@ -30,13 +26,13 @@ class ClassGenerator {
     return managedObjectList;
   }
 
-  static Future<List<String>> generateModelClass(List<Table> tableList, SchemaReader schemaReader) async {
+  static Future<List<String>> generateModelClass(List<Table> tableList) async {
     var modelClassList = <String>[];
 
     for (var table in tableList) {
       var fieldList = <Field>[];
 
-      // Column
+      //* Columns
       for (var column in table.columnList) {
         var normalField = Field((fieldBuilder) {
           fieldBuilder
@@ -45,8 +41,6 @@ class ClassGenerator {
 
           if (column.primaryKey) {
             fieldBuilder.annotations.add(refer('primaryKey'));
-          } else {
-            // fieldBuilder.annotations.add(refer('Column(databaseType: ManagedPropertyType.bigInteger)'));
           }
 
           return fieldBuilder;
@@ -55,7 +49,7 @@ class ClassGenerator {
         fieldList.add(normalField);
       }
 
-      //ManagedSet
+      //* ManagedSet
       for (var managedSet in table.managedSetList) {
         var normalField = Field((fieldBuilder) {
           fieldBuilder
@@ -68,6 +62,7 @@ class ClassGenerator {
         fieldList.add(normalField);
       }
 
+      //* Relate
       for (var relate in table.relateList) {
         var normalField = Field((fieldBuilder) {
           fieldBuilder
