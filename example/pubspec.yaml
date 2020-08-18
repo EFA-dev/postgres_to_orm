@@ -16,3 +16,5 @@ dev_dependencies:
 
   postgres_to_orm:
     path: ../../postgres_to_orm
+    # git:
+    #   url: https://github.com/EFA-dev/postgres_to_orm.git
