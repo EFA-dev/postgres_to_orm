@@ -44,7 +44,7 @@ class FileGenerator {
       for (var className in importList) {
         //* Check for self referencing
         if (className != table.name.replaceFirst('_', '').toLowerCase()) {
-          var import = p.join("import 'package:${packageName}/${config.outputPath.replaceAll("lib/", '')}", "$className.dart';");
+          var import = p.join("import 'package:${packageName}/${config.outputPath.replaceAll("lib/", '')}/", "$className.dart';");
           fileContent += import;
         }
       }
