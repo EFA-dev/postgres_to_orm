@@ -42,7 +42,7 @@ class SchemaReader {
       var foreignTableConstraintList = await getTableConstrints(table.name, forTable: false);
 
       //* Primary Key Constraint
-      var primaryKeyConstraint = constraintList.firstWhere((element) => element.isPrimaryKey);
+      var primaryKeyConstraint = constraintList.firstWhere((element) => element.isPrimaryKey, orElse: () => null);
       if (primaryKeyConstraint != null) {
         table.columnList.firstWhere((element) => element.name == primaryKeyConstraint.columnName).primaryKey = true;
         constraintList.removeWhere((element) => element.isPrimaryKey);
