@@ -9,6 +9,5 @@ class _City {
 
   String name;
 
-  @Relate(#capital)
-  Country country;
+  Country countryId;
 }

@@ -85,8 +85,8 @@ class ClassGenerator {
             ..name = relate.name
             ..type = refer('${relate.typeName}');
 
-          if (relate.relateType != null) {
-            fieldBuilder..annotations.add(refer('Relate(#${relate.relateType})'));
+          if (relate.relateSymbol != null) {
+            fieldBuilder..annotations.add(refer('Relate(#${relate.relateSymbol})'));
           }
 
           return fieldBuilder;

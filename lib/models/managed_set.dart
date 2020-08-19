@@ -1,7 +1,7 @@
 class ManagedSet {
   final String name;
   final String typeName;
-  final String fileName;
+  final String importFileName;
 
-  ManagedSet({this.name, this.typeName, this.fileName});
+  ManagedSet({this.name, this.typeName, this.importFileName});
 }

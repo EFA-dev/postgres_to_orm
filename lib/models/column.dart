@@ -1,5 +1,7 @@
+import 'package:postgres_to_orm/src/extensions.dart';
+
 class Column {
-  final String name;
+  final String nameRaw;
   String dbDataType;
   bool primaryKey;
   bool nullable;
@@ -45,8 +47,13 @@ class Column {
     }
   }
 
+  String get name {
+    // return nameRaw.camelCase;
+    return nameRaw.removeFirstUnderscore;
+  }
+
   Column({
-    this.name,
+    this.nameRaw,
     this.dbDataType,
     this.primaryKey = false,
     this.nullable = false,
@@ -58,21 +65,3 @@ class Column {
     this.selfReferencing,
   });
 }
-
-// static ManagedPropertyType get integer => ManagedPropertyType.integer;
-
-// static ManagedPropertyType get bigInteger => ManagedPropertyType.bigInteger;
-
-// static ManagedPropertyType get string => ManagedPropertyType.string;
-
-// static ManagedPropertyType get datetime => ManagedPropertyType.datetime;
-
-// static ManagedPropertyType get boolean => ManagedPropertyType.boolean;
-
-// static ManagedPropertyType get doublePrecision => ManagedPropertyType.doublePrecision;
-
-// static ManagedPropertyType get map => ManagedPropertyType.map;
-
-// static ManagedPropertyType get list => ManagedPropertyType.list;
-
-// static ManagedPropertyType get document => ManagedPropertyType.document;

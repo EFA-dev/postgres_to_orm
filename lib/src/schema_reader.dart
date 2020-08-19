@@ -1,4 +1,3 @@
-import 'package:inflection2/inflection2.dart';
 import 'package:logging/logging.dart';
 import 'package:postgres/postgres.dart';
 import 'package:postgres_to_orm/models/column.dart';
@@ -9,7 +8,7 @@ import 'package:postgres_to_orm/models/relate.dart';
 import 'package:postgres_to_orm/models/table.dart';
 import 'package:postgres_to_orm/src/build_configuration.dart';
 import 'package:postgres_to_orm/src/query_collection.dart';
-import 'package:recase/recase.dart';
+import 'package:postgres_to_orm/src/extensions.dart';
 
 class SchemaReader {
   final BuildConfiguration config;
@@ -44,29 +43,29 @@ class SchemaReader {
       //* Primary Key Constraint
       var primaryKeyConstraint = constraintList.firstWhere((element) => element.isPrimaryKey, orElse: () => null);
       if (primaryKeyConstraint != null) {
-        table.columnList.firstWhere((element) => element.name == primaryKeyConstraint.columnName).primaryKey = true;
+        table.columnList.firstWhere((element) => element.nameRaw == primaryKeyConstraint.fromColumnName).primaryKey = true;
         constraintList.removeWhere((element) => element.isPrimaryKey);
       }
 
       //* Foreign Table relations
       for (var foreignTableConstraint in foreignTableConstraintList) {
         //* Self referencing
-        if (foreignTableConstraint.tableName == foreignTableConstraint.foreignTableName) {
+        if (foreignTableConstraint.fromTableName == foreignTableConstraint.toTableName) {
           table.managedSetList.add(ManagedSet(
-            typeName: ReCase(foreignTableConstraint.tableName).pascalCase,
-            name: pluralize(ReCase(foreignTableConstraint.columnName).camelCase.replaceFirst('_', '')),
-            fileName: ReCase(foreignTableConstraint.tableName).snakeCase,
+            typeName: foreignTableConstraint.fromTableName.pascalCase,
+            name: foreignTableConstraint.fromColumnName.camelCase.pluralize,
+            importFileName: foreignTableConstraint.fromTableName.snakeCase,
           ));
         } else {
           //* This is for one to one relation
           var checkConstraint =
-              constraintList.firstWhere((element) => element.foreignTableName == foreignTableConstraint.tableName, orElse: () => null);
+              constraintList.firstWhere((element) => element.toTableName == foreignTableConstraint.fromTableName, orElse: () => null);
 
           if (checkConstraint == null) {
             table.managedSetList.add(ManagedSet(
-              typeName: ReCase(foreignTableConstraint.tableName).pascalCase,
-              name: pluralize(ReCase(foreignTableConstraint.tableName).camelCase),
-              fileName: ReCase(foreignTableConstraint.tableName).snakeCase,
+              typeName: foreignTableConstraint.fromTableName.pascalCase,
+              name: foreignTableConstraint.fromTableName.camelCase.pluralize,
+              importFileName: foreignTableConstraint.fromTableName.snakeCase,
             ));
           }
         }
@@ -75,62 +74,62 @@ class SchemaReader {
       //* Current Table relations
       for (var constraint in constraintList) {
         //* Self referencing
-        if (constraint.tableName == constraint.foreignTableName) {
+        if (constraint.fromTableName == constraint.toTableName) {
           table.relateList.add(
             Relate(
-              relateType: pluralize(ReCase(constraint.columnName).camelCase.replaceFirst('_', '')),
-              typeName: ReCase(constraint.tableName).pascalCase,
-              name: ReCase(constraint.columnName).camelCase.replaceFirst('_', ''),
-              fileName: ReCase(constraint.tableName).snakeCase,
+              relateSymbol: constraint.fromColumnName.camelCase.pluralize,
+              typeName: constraint.fromTableName.pascalCase,
+              name: constraint.fromColumnName.camelCase,
+              importFileName: constraint.fromTableName.snakeCase,
             ),
           );
         } else {
           //* Check is there any constraint to this table
           var checkConstraint = foreignTableConstraintList.firstWhere(
-            (element) => element.foreignTableName == constraint.tableName,
+            (element) => element.toTableName == constraint.fromTableName,
             orElse: () => null,
           );
 
-          var fileName = ReCase(constraint.foreignTableName).snakeCase;
+          var fileName = constraint.toTableName.snakeCase;
 
           if (checkConstraint == null) {
             table.relateList.add(
               Relate(
-                relateType: ReCase(pluralize(table.name)).camelCase,
-                typeName: ReCase(constraint.foreignTableName).pascalCase,
-                name: constraint.foreignTableName.replaceFirst('_', ''),
-                fileName: fileName,
+                relateSymbol: table.name.camelCase.pluralize,
+                typeName: constraint.toTableName.pascalCase,
+                name: constraint.toTableName,
+                importFileName: fileName,
               ),
             );
           } else {
             //* To check is there any column that use for foreign key constraint
             //* This is need for one to one relation
             var hasConstraintColumn = table.columnList.any(
-              (element) => element.name == constraint.columnName.replaceFirst('_', ''),
+              (column) => column.nameRaw == constraint.fromColumnName,
             );
             if (hasConstraintColumn == false) {
               table.relateList.add(
                 Relate(
-                  relateType: ReCase(checkConstraint.columnName).camelCase,
-                  typeName: ReCase(constraint.foreignTableName).pascalCase,
-                  name: constraint.foreignTableName.replaceFirst('_', ''),
-                  fileName: fileName,
+                  relateSymbol: checkConstraint.fromColumnName.camelCase,
+                  typeName: constraint.toTableName.pascalCase,
+                  name: constraint.toTableName,
+                  importFileName: fileName,
                 ),
               );
             } else {
               table.relateList.add(
                 Relate(
-                  relateType: null,
-                  typeName: ReCase(constraint.foreignTableName).pascalCase,
-                  name: constraint.columnName.replaceFirst('_', ''),
-                  fileName: fileName,
+                  relateSymbol: null,
+                  typeName: constraint.toTableName.pascalCase,
+                  name: constraint.fromColumnName.camelCase,
+                  importFileName: fileName,
                 ),
               );
             }
           }
         }
 
-        table.columnList.removeWhere((element) => element.name == constraint.columnName);
+        table.columnList.removeWhere((element) => element.nameRaw == constraint.fromColumnName);
       }
     }
 
@@ -146,14 +145,14 @@ class SchemaReader {
 
     var columnList = <Column>[];
     for (var row in results) {
-      var name = row[0];
+      var nameRaw = row[0];
       var dataType = row[1];
       var isNullable = row[2] == 'YES' ? true : false;
       final isIdentity = row[3] == 'YES' ? true : false;
       final isSelfReferencing = row[3] == 'YES' ? true : false;
 
       columnList.add(Column(
-        name: name,
+        nameRaw: nameRaw,
         dbDataType: dataType,
         nullable: isNullable,
         identity: isIdentity,
@@ -181,18 +180,18 @@ class SchemaReader {
     var constraintList = <Constraint>[];
     for (var row in result) {
       String type = row[0];
-      String tableName = row[1];
-      String columnName = row[2];
-      String foreignTableName = row[3];
-      String foreignColumnName = row[4];
+      String fromTableName = row[1];
+      String fromColumnName = row[2];
+      String toTableName = row[3];
+      String toTableColumnName = row[4];
       String schema = row[5];
 
       constraintList.add(Constraint(
         type: type,
-        tableName: tableName,
-        columnName: columnName,
-        foreignTableName: foreignTableName,
-        foreignColumnName: foreignColumnName,
+        fromTableNameRaw: fromTableName,
+        fromColumnNameRaw: fromColumnName,
+        toTableNameRaw: toTableName,
+        toTableColumnNameRaw: toTableColumnName,
         schema: schema,
       ));
     }

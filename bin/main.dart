@@ -12,7 +12,6 @@ import 'package:postgres_to_orm/src/class_generator.dart';
 import 'package:postgres_to_orm/src/db_connection.dart';
 import 'package:postgres_to_orm/src/file_generator.dart';
 import 'package:postgres_to_orm/src/schema_reader.dart';
-import 'package:yaml/yaml.dart';
 
 Future<void> main(List<String> arguments) async {
   checkArgs(arguments);

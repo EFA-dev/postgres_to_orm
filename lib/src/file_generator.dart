@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:code_builder/code_builder.dart';
+import 'package:postgres_to_orm/src/extensions.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:logging/logging.dart';
 import 'package:meta/meta.dart';
@@ -26,7 +26,7 @@ class FileGenerator {
       await outputDirectory.create(recursive: true);
     }
 
-    var packageName = await config.pubspec.name;
+    var packageName = config.pubspec.name;
 
     //* Package import reference
     var packageImport = "import 'package:${packageName}/${packageName}.dart';";
@@ -37,25 +37,25 @@ class FileGenerator {
       fileContent += packageImport;
 
       //* Import References
-      var referansFilesFromRelate = table.relateList.map((e) => e.fileName).toList();
-      var referansFilesFromManagedSet = table.managedSetList.map((e) => e.fileName).toList();
-      var importList = [...referansFilesFromRelate, ...referansFilesFromManagedSet]..toSet().toList();
+      var importFileNameListFromRelate = table.relateList.map((e) => e.importFileName).toList();
+      var importFileNameListFromManagedSet = table.managedSetList.map((e) => e.importFileName).toList();
+      var imporList = [...importFileNameListFromRelate, ...importFileNameListFromManagedSet]..toSet().toList();
 
-      for (var className in importList) {
+      for (var importFile in imporList) {
         //* Check for self referencing
-        if (className != table.name.replaceFirst('_', '').toLowerCase()) {
-          var import = p.join("import 'package:${packageName}/${config.outputPath.replaceAll("lib/", '')}/", "$className.dart';");
+        if (importFile != table.name.removeFirstUnderscore.toLowerCase()) {
+          var import = p.join("import 'package:${packageName}/${config.outputPath.replaceAll("lib/", '')}/", "$importFile.dart';");
           fileContent += import;
         }
       }
 
       //* Class contents
-      fileContent += managedObjectSetList.firstWhere((element) => element.tableName == table.name).managedObjectClass;
-      fileContent += modelClassSetList.firstWhere((element) => element.tableName == table.name).modelClass;
+      fileContent += managedObjectSetList.firstWhere((element) => element.tableName == table.name, orElse: () => null)?.managedObjectClass ?? '';
+      fileContent += modelClassSetList.firstWhere((element) => element.tableName == table.name, orElse: () => null)?.modelClass ?? '';
 
       final formated = DartFormatter().format(fileContent);
 
-      var fileName = table.name.replaceFirst('_', '') + '.dart';
+      var fileName = table.name.removeFirstUnderscore + '.dart';
       var filePath = p.join(outputDirectory.path, fileName);
       var file = File(filePath);
       await file.writeAsString(formated);
