@@ -26,7 +26,7 @@ class FileGenerator {
       await outputDirectory.create(recursive: true);
     }
 
-    var packageName = await config.packageName;
+    var packageName = await config.pubspec.name;
 
     //* Package import reference
     var packageImport = "import 'package:${packageName}/${packageName}.dart';";

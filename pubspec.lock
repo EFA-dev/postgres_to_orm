@@ -296,7 +296,7 @@ packages:
     source: hosted
     version: "1.4.4"
   pubspec_parse:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: pubspec_parse
       url: "https://pub.dartlang.org"
@@ -464,7 +464,7 @@ packages:
     source: hosted
     version: "0.7.3"
   yaml:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: yaml
       url: "https://pub.dartlang.org"
