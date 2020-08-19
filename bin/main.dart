@@ -2,11 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:args/args.dart';
-import 'package:code_builder/code_builder.dart';
-import 'package:dart_style/dart_style.dart';
+
 import 'package:io/ansi.dart';
 import 'package:logging/logging.dart';
-import 'package:postgres_to_orm/models/table.dart';
 import 'package:postgres_to_orm/src/build_configuration.dart';
 import 'package:postgres_to_orm/src/class_generator.dart';
 import 'package:postgres_to_orm/src/db_connection.dart';
@@ -14,7 +12,7 @@ import 'package:postgres_to_orm/src/file_generator.dart';
 import 'package:postgres_to_orm/src/schema_reader.dart';
 
 Future<void> main(List<String> arguments) async {
-  checkArgs(arguments);
+  var argResults = checkArgs(arguments);
 
   var log = Logger.root;
 
@@ -52,6 +50,8 @@ Future<void> main(List<String> arguments) async {
     tableList: tableList,
     managedObjectSetList: managedObjectSetList,
     modelClassSetList: modelClassSetList,
+    packageName: argResults['packageName'],
+    outputPath: argResults['outputPath'],
   );
   log.info('*** ${modelClassSetList.length} File created ***');
 
@@ -60,17 +60,22 @@ Future<void> main(List<String> arguments) async {
 
 //class Article extends ManagedObject<_Article> implements _Article {}
 
-void checkArgs(List<String> arguments) {
+ArgResults checkArgs(List<String> arguments) {
   var parser = ArgParser();
   parser.addFlag('verbose', defaultsTo: true, abbr: 'v');
-
-  bool verbose = parser.parse(arguments)['verbose'];
+  parser.addOption('packageName');
+  parser.addOption('outputPath');
+  var results = parser.parse(arguments);
+  bool verbose = results['verbose'];
   if (verbose) {
     Logger.root.level = Level.ALL;
     Logger.root.onRecord.listen((record) {
       stdout.write(colorLog(record));
     });
   }
+
+  return results;
+  // Logger.root.warning(outputPath);
 }
 
 StringBuffer colorLog(LogRecord record, {bool verbose = true}) {

@@ -20,13 +20,16 @@ class FileGenerator {
     @required List<Table> tableList,
     @required List<ManagedObjectSet> managedObjectSetList,
     @required List<ModelClassSet> modelClassSetList,
+    String packageName,
+    String outputPath,
   }) async {
-    var outputDirectory = Directory(configuration.outputPath);
+    packageName = packageName ?? config.pubspec.name;
+    outputPath = (outputPath ?? config.outputPath);
+
+    var outputDirectory = Directory(outputPath);
     if (await outputDirectory.exists() == false) {
       await outputDirectory.create(recursive: true);
     }
-
-    var packageName = config.pubspec.name;
 
     //* Package import reference
     var packageImport = "import 'package:${packageName}/${packageName}.dart';";
@@ -44,7 +47,7 @@ class FileGenerator {
       for (var importFile in imporList) {
         //* Check for self referencing
         if (importFile != table.name.removeFirstUnderscore.toLowerCase()) {
-          var import = p.join("import 'package:${packageName}/${config.outputPath.replaceAll("lib/", '')}/", "$importFile.dart';");
+          var import = p.join("import 'package:${packageName}/${outputPath.replaceAll(RegExp(r'.*lib/'), '')}/", "$importFile.dart';");
           fileContent += import;
         }
       }
