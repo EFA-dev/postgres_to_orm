@@ -126,7 +126,8 @@ class ClassGenerator {
           ..name = controller.name
           ..extend = refer('ResourceController');
 
-        controller.methods.forEach((controllerMethod) {
+        for (var controllerMethod in controller.methods) {
+          //* get, post, put, delete,..
           var _method = Method((m) {
             m.annotations.add(refer(controllerMethod.operation.toString()));
             m.name = controllerMethod.name;
@@ -134,8 +135,7 @@ class ClassGenerator {
             m.modifier = MethodModifier.async;
             m.body = Code('return Response.ok("");');
 
-            //* (ParameterBind Type Name)
-            controllerMethod.parameterList.forEach((methodParameter) {
+            for (var methodParameter in controllerMethod.parameterList) {
               //* (Bind.path(id) int Id)
               if (methodParameter.parameterName != null) {
                 var parameter = Parameter((p) {
@@ -148,11 +148,11 @@ class ClassGenerator {
 
                 m.requiredParameters.add(parameter);
               }
-            });
+            }
             return m;
           });
           builder.methods.add(_method);
-        });
+        }
 
         return builder;
       });
@@ -170,73 +170,70 @@ class ClassGenerator {
   Controller generateController(Table table) {
     var operationMethodList = <OperationMethod>[];
 
-    //* Get All
-    var getAll = OperationMethod(
-      name: 'getAll' + table.name.pascalCase.pluralize,
-      operation: Operation.getAll(),
-      parameterList: [
-        MethodParameter(
-          bind: Bind.path(table.primarColumn.name),
-        )
-      ],
-    );
-    operationMethodList.add(getAll);
+    if (table.primarColumn != null) {
+      //* Get All
+      var getAll = OperationMethod(
+        name: 'getAll' + table.name.pascalCase.pluralize,
+        operation: Operation.getAll(),
+      );
+      operationMethodList.add(getAll);
 
-    //* Get Single
-    var getSingle = OperationMethod(
-        name: 'get' + table.name.pascalCase + 'ByID',
-        operation: Operation.getSingle(table.primarColumn.name.camelCase),
+      //* Get Single
+      var getSingle = OperationMethod(
+          name: 'get' + table.name.pascalCase + 'ByID',
+          operation: Operation.getSingle(table.primarColumn.name.camelCase),
+          parameterList: [
+            MethodParameter(
+              bind: Bind.path(table.primarColumn.name),
+              parameterType: table.primarColumn.dataType,
+              parameterName: table.primarColumn.name.camelCase,
+            )
+          ]);
+      operationMethodList.add(getSingle);
+
+      //* Post
+      var post = OperationMethod(name: 'add' + table.name.pascalCase, operation: Operation.post(), parameterList: [
+        MethodParameter(
+          bind: Bind.body(),
+          parameterName: table.name.camelCase,
+          parameterType: table.name.pascalCase,
+        )
+      ]);
+      operationMethodList.add(post);
+
+      //* put
+      var put = OperationMethod(
+        name: 'update' + table.name.pascalCase,
+        operation: Operation.put(table.primarColumn.name.camelCase),
+        parameterList: [
+          MethodParameter(
+            bind: Bind.path(table.primarColumn.name),
+            parameterType: table.primarColumn.dataType,
+            parameterName: table.primarColumn.name.camelCase,
+          ),
+          MethodParameter(
+            bind: Bind.body(),
+            parameterName: table.name.camelCase,
+            parameterType: table.name.pascalCase,
+          )
+        ],
+      );
+      operationMethodList.add(put);
+
+      //* delete
+      var delete = OperationMethod(
+        name: 'delete' + table.name.pascalCase,
+        operation: Operation.delete(table.primarColumn.name.camelCase),
         parameterList: [
           MethodParameter(
             bind: Bind.path(table.primarColumn.name),
             parameterType: table.primarColumn.dataType,
             parameterName: table.primarColumn.name.camelCase,
           )
-        ]);
-    operationMethodList.add(getSingle);
-
-    //* Post
-    var post = OperationMethod(name: 'add' + table.name.pascalCase, operation: Operation.post(), parameterList: [
-      MethodParameter(
-        bind: Bind.body(),
-        parameterName: table.name.camelCase,
-        parameterType: table.name.pascalCase,
-      )
-    ]);
-    operationMethodList.add(post);
-
-    //* put
-    var put = OperationMethod(
-      name: 'update' + table.name.pascalCase,
-      operation: Operation.put(table.primarColumn.name.camelCase),
-      parameterList: [
-        MethodParameter(
-          bind: Bind.path(table.primarColumn.name),
-          parameterType: table.primarColumn.dataType,
-          parameterName: table.primarColumn.name.camelCase,
-        ),
-        MethodParameter(
-          bind: Bind.body(),
-          parameterName: table.name.camelCase,
-          parameterType: table.name.pascalCase,
-        )
-      ],
-    );
-    operationMethodList.add(put);
-
-    //* delete
-    var delete = OperationMethod(
-      name: 'delete' + table.name.pascalCase,
-      operation: Operation.delete(table.primarColumn.name.camelCase),
-      parameterList: [
-        MethodParameter(
-          bind: Bind.path(table.primarColumn.name),
-          parameterType: table.primarColumn.dataType,
-          parameterName: table.primarColumn.name.camelCase,
-        )
-      ],
-    );
-    operationMethodList.add(delete);
+        ],
+      );
+      operationMethodList.add(delete);
+    }
 
     var controller = Controller(name: table.name.pascalCase + 'Controller', methods: operationMethodList);
 

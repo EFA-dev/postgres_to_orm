@@ -63,7 +63,7 @@ class OperationMethod {
   OperationMethod({
     this.name,
     this.operation,
-    this.parameterList,
+    this.parameterList = const [],
   });
 }
 
