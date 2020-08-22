@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:postgres_to_orm/models/controller_class.dart';
 import 'package:postgres_to_orm/src/extensions.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:logging/logging.dart';
@@ -21,12 +22,12 @@ class FileGenerator {
     @required List<ManagedObjectSet> managedObjectSetList,
     @required List<ModelClassSet> modelClassSetList,
     String packageName,
-    String outputPath,
+    String entityPath,
   }) async {
     packageName = packageName ?? config.pubspec.name;
-    outputPath = (outputPath ?? config.outputPath);
+    entityPath = (entityPath ?? config.entityPath);
 
-    var outputDirectory = Directory(outputPath);
+    var outputDirectory = Directory(entityPath);
     if (await outputDirectory.exists() == false) {
       await outputDirectory.create(recursive: true);
     }
@@ -47,7 +48,7 @@ class FileGenerator {
       for (var importFile in imporList) {
         //* Check for self referencing
         if (importFile != table.name.removeFirstUnderscore.toLowerCase()) {
-          var import = p.join("import 'package:${packageName}/${outputPath.replaceAll(RegExp(r'.*lib/'), '')}/", "$importFile.dart';");
+          var import = p.join("import 'package:${packageName}/${entityPath.replaceAll(RegExp(r'.*lib/'), '')}/", "$importFile.dart';");
           fileContent += import;
         }
       }
@@ -59,6 +60,47 @@ class FileGenerator {
       final formated = DartFormatter().format(fileContent);
 
       var fileName = table.name.removeFirstUnderscore + '.dart';
+      var filePath = p.join(outputDirectory.path, fileName);
+      var file = File(filePath);
+      await file.writeAsString(formated);
+
+      Logger.root.info('~~~ Completed: ${fileName}');
+    }
+
+    return Future.value(true);
+  }
+
+  Future<bool> generateControllerFile({
+    @required BuildConfiguration config,
+    @required List<ControllerClass> controllerClassList,
+    String packageName,
+    String controllerPath,
+    String entityPath,
+  }) async {
+    packageName = packageName ?? config.pubspec.name;
+    controllerPath = (controllerPath ?? config.controllerPath);
+    entityPath = (entityPath ?? config.entityPath);
+
+    var outputDirectory = Directory(controllerPath);
+    if (await outputDirectory.exists() == false) {
+      await outputDirectory.create(recursive: true);
+    }
+
+    for (var controllerClass in controllerClassList) {
+      var fileName = controllerClass.tableName.snakeCase + '_controller.dart';
+
+      final aqueductImport = "import 'package:aqueduct/aqueduct.dart';";
+
+      var fileContent = aqueductImport;
+
+      var import =
+          p.join("import 'package:${packageName}/${entityPath.replaceAll(RegExp(r'.*lib/'), '')}/", "${controllerClass.tableName.snakeCase}.dart';");
+      fileContent += import;
+
+      fileContent += controllerClass.controller;
+
+      final formated = DartFormatter().format(fileContent);
+
       var filePath = p.join(outputDirectory.path, fileName);
       var file = File(filePath);
       await file.writeAsString(formated);

@@ -9,7 +9,7 @@ class Table {
   List<ManagedSet> managedSetList = [];
   List<Relate> relateList = [];
 
-  String get managedObjectName => ReCase(name).pascalCase;
+  String get managedObjectName => name.pascalCase;
   String get modelName => '_$managedObjectName';
 
   Column get primarColumn => columnList.firstWhere((element) => element.primaryKey);

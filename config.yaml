@@ -1,4 +1,6 @@
-outputPath: example/lib/model
+entityPath: example/lib/model
+createController: true
+controllerPath: example/lib/controller
 dbSchema: public
 database:
   username: postgres

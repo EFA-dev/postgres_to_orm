@@ -29,7 +29,7 @@ class SchemaReader {
       tableList.add(Table(name: tableName));
     }
 
-    //Add all column
+    //* Add all column
     for (var table in tableList) {
       var columnList = await getTableColumns(table.name);
       table.columnList = columnList;

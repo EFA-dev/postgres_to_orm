@@ -2,10 +2,13 @@ import 'package:code_builder/code_builder.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:logging/logging.dart';
 import 'package:meta/meta.dart';
+import 'package:postgres_to_orm/models/controller.dart';
+import 'package:postgres_to_orm/models/controller_class.dart';
 import 'package:postgres_to_orm/models/managed_object_set.dart';
 import 'package:postgres_to_orm/models/model_class_set.dart';
 import 'package:postgres_to_orm/models/table.dart';
 import 'package:postgres_to_orm/src/build_configuration.dart';
+import 'package:postgres_to_orm/src/extensions.dart';
 
 class ClassGenerator {
   final BuildConfiguration config;
@@ -22,12 +25,12 @@ class ClassGenerator {
       // Logger.root.info('~~~ Processing: ${table.managedObjectName}');
 
       final managedObject = Class((builder) {
-        var clasbuilder = builder
+        builder
           ..name = table.managedObjectName
           ..extend = refer('ManagedObject<${table.modelName}>')
           ..implements.add(refer(table.modelName));
 
-        return clasbuilder;
+        return builder;
       });
 
       final emitter = DartEmitter();
@@ -108,5 +111,135 @@ class ClassGenerator {
     }
 
     return modelClassList;
+  }
+
+  // Generate Controller Class as Formated String
+  Future<List<ControllerClass>> generateControllerClass() async {
+    var controllerClassList = <ControllerClass>[];
+
+    for (var table in tableList) {
+      var classContent = '';
+
+      var controller = generateController(table);
+      var controllerClass = Class((builder) {
+        builder
+          ..name = controller.name
+          ..extend = refer('ResourceController');
+
+        controller.methods.forEach((controllerMethod) {
+          var _method = Method((m) {
+            m.annotations.add(refer(controllerMethod.operation.toString()));
+            m.name = controllerMethod.name;
+            m.returns = refer('Future<Response>');
+            m.modifier = MethodModifier.async;
+            m.body = Code('return Response.ok("");');
+
+            //* (ParameterBind Type Name)
+            controllerMethod.parameterList.forEach((methodParameter) {
+              //* (Bind.path(id) int Id)
+              if (methodParameter.parameterName != null) {
+                var parameter = Parameter((p) {
+                  p.name = methodParameter.parameterName;
+                  p.annotations.add(refer(methodParameter.bind.toString()));
+                  p.type = refer(methodParameter.parameterType);
+
+                  return p;
+                });
+
+                m.requiredParameters.add(parameter);
+              }
+            });
+            return m;
+          });
+          builder.methods.add(_method);
+        });
+
+        return builder;
+      });
+
+      final emitter = DartEmitter();
+      classContent += '${controllerClass.accept(emitter)}';
+      final formated = DartFormatter().format(classContent);
+
+      controllerClassList.add(ControllerClass(tableName: table.name, controller: formated));
+    }
+
+    return controllerClassList;
+  }
+
+  Controller generateController(Table table) {
+    var operationMethodList = <OperationMethod>[];
+
+    //* Get All
+    var getAll = OperationMethod(
+      name: 'getAll' + table.name.pascalCase.pluralize,
+      operation: Operation.getAll(),
+      parameterList: [
+        MethodParameter(
+          bind: Bind.path(table.primarColumn.name),
+        )
+      ],
+    );
+    operationMethodList.add(getAll);
+
+    //* Get Single
+    var getSingle = OperationMethod(
+        name: 'get' + table.name.pascalCase + 'ByID',
+        operation: Operation.getSingle(table.primarColumn.name.camelCase),
+        parameterList: [
+          MethodParameter(
+            bind: Bind.path(table.primarColumn.name),
+            parameterType: table.primarColumn.dataType,
+            parameterName: table.primarColumn.name.camelCase,
+          )
+        ]);
+    operationMethodList.add(getSingle);
+
+    //* Post
+    var post = OperationMethod(name: 'add' + table.name.pascalCase, operation: Operation.post(), parameterList: [
+      MethodParameter(
+        bind: Bind.body(),
+        parameterName: table.name.camelCase,
+        parameterType: table.name.pascalCase,
+      )
+    ]);
+    operationMethodList.add(post);
+
+    //* put
+    var put = OperationMethod(
+      name: 'update' + table.name.pascalCase,
+      operation: Operation.put(table.primarColumn.name.camelCase),
+      parameterList: [
+        MethodParameter(
+          bind: Bind.path(table.primarColumn.name),
+          parameterType: table.primarColumn.dataType,
+          parameterName: table.primarColumn.name.camelCase,
+        ),
+        MethodParameter(
+          bind: Bind.body(),
+          parameterName: table.name.camelCase,
+          parameterType: table.name.pascalCase,
+        )
+      ],
+    );
+    operationMethodList.add(put);
+
+    //* delete
+    var delete = OperationMethod(
+      name: 'delete' + table.name.pascalCase,
+      operation: Operation.delete(table.primarColumn.name.camelCase),
+      parameterList: [
+        MethodParameter(
+          bind: Bind.path(table.primarColumn.name),
+          parameterType: table.primarColumn.dataType,
+          parameterName: table.primarColumn.name.camelCase,
+        )
+      ],
+    );
+    operationMethodList.add(delete);
+
+    var controller = Controller(name: table.name.pascalCase + 'Controller', methods: operationMethodList);
+
+    return controller;
   }
 }

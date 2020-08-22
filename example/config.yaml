@@ -1,5 +1,7 @@
-outputPath: lib/model
+entityPath: lib/model
 dbSchema: public
+createController: true
+controllerPath: lib/controller
 database:
   username: postgres
   password: postgres

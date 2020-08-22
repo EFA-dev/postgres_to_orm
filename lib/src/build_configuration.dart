@@ -12,7 +12,9 @@ class BuildConfiguration extends Configuration {
   Pubspec _pubspec;
   Pubspec get pubspec => _pubspec;
 
-  String outputPath = 'lib/model/';
+  String entityPath = 'lib/model/';
   String dbSchema = 'public';
+  bool createController = true;
+  String controllerPath = 'lib/controller/';
   DatabaseConfiguration database;
 }

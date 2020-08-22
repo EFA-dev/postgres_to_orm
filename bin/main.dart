@@ -44,27 +44,41 @@ Future<void> main(List<String> arguments) async {
   log.info('*** ${modelClassSetList.length} Model Class created ***');
 
   //* Entity File
-  log.info('*** Creating Entity Files ***');
-  var saveEntityResult = await fileGenerator.generateEntityFile(
-    config: config,
-    tableList: tableList,
-    managedObjectSetList: managedObjectSetList,
-    modelClassSetList: modelClassSetList,
-    packageName: argResults['packageName'],
-    outputPath: argResults['outputPath'],
-  );
-  log.info('*** ${modelClassSetList.length} File created ***');
+  // log.info('*** Creating Entity Files ***');
+  // var generateEntityResult = await fileGenerator.generateEntityFile(
+  //   config: config,
+  //   tableList: tableList,
+  //   managedObjectSetList: managedObjectSetList,
+  //   modelClassSetList: modelClassSetList,
+  //   packageName: argResults['packageName'],
+  //   outputPath: argResults['entityPath'],
+  // );
+  // log.info('*** ${modelClassSetList.length} Entity File created ***');
+
+  //* Controller File
+  if (config.createController) {
+    log.info('*** Creating Controller Files ***');
+    var controllerClassList = await classGenerator.generateControllerClass();
+
+    var generateControllerResult = fileGenerator.generateControllerFile(
+      config: config,
+      controllerClassList: controllerClassList,
+      packageName: argResults['packageName'],
+      controllerPath: argResults['controllerPath'],
+      entityPath: argResults['entityPath'],
+    );
+    log.info('*** ${tableList.length} Controller File created ***');
+  }
 
   await connection.close();
 }
-
-//class Article extends ManagedObject<_Article> implements _Article {}
 
 ArgResults checkArgs(List<String> arguments) {
   var parser = ArgParser();
   parser.addFlag('verbose', defaultsTo: true, abbr: 'v');
   parser.addOption('packageName');
-  parser.addOption('outputPath');
+  parser.addOption('entityPath');
+  parser.addOption('controllerPath');
   var results = parser.parse(arguments);
   bool verbose = results['verbose'];
   if (verbose) {
@@ -75,7 +89,6 @@ ArgResults checkArgs(List<String> arguments) {
   }
 
   return results;
-  // Logger.root.warning(outputPath);
 }
 
 StringBuffer colorLog(LogRecord record, {bool verbose = true}) {
