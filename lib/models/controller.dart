@@ -1,4 +1,5 @@
 import 'package:meta/meta.dart';
+import 'package:postgres_to_orm/src/extensions.dart';
 
 // region [p]
 class Controller {
@@ -51,6 +52,13 @@ class Operation {
 // region [g]
 //  Future<Response> getUserById(@Bind.path('id') int id) async
 class OperationMethod {
+  OperationMethod({
+    this.name,
+    this.operation,
+    this.parameterList = const [],
+    this.body,
+  });
+
   //* getAllCities
   final String name;
 
@@ -60,14 +68,89 @@ class OperationMethod {
   //* Method bind parameter settings
   final List<MethodParameter> parameterList;
 
-  OperationMethod({
-    this.name,
-    this.operation,
-    this.parameterList = const [],
-  });
+  final String body;
 }
 
 // endregion
+
+class OperationMethodBody {
+  static String getAllBody(String tableName) {
+    var query = tableName.camelCase + 'Query';
+    var responseField = tableName.camelCase.pluralize;
+    var type = tableName.pascalCase;
+
+    return '''
+    final $query = Query<${type}>(context);
+    final $responseField = await $query.fetch();
+    return Response.ok($responseField);
+    ''';
+  }
+
+  static String getSingleById(String tableName, String primaryColumnName) {
+    var query = tableName.camelCase + 'Query';
+    var responseField = tableName.camelCase;
+    var type = tableName.pascalCase;
+    var columnName = primaryColumnName.camelCase;
+
+    return '''
+    final $query = Query<${type}>(context)..where((x) => x.$columnName).equalTo($columnName);
+    final $responseField = await $query.fetchOne();
+    if ($responseField == null) {
+      return Response.notFound();
+    }
+    return Response.ok($responseField);
+    ''';
+  }
+
+  static String post(String tableName) {
+    var query = tableName.camelCase + 'Query';
+    var type = tableName.pascalCase;
+    var responseField = 'inserted' + tableName.pascalCase;
+    var parameter = tableName.camelCase;
+    return '''
+    final $query = Query<$type>(context)..values = $parameter;
+    final $responseField = await $query.insert();
+    return Response.ok($responseField);
+    ''';
+  }
+
+  static String put(String tableName, String primaryColumnName) {
+    var query = tableName.camelCase + 'Query';
+    var responseField = 'updated' + tableName.pascalCase;
+    var type = tableName.pascalCase;
+    var columnName = primaryColumnName.camelCase;
+    var bodyParameter = tableName.camelCase;
+
+    return '''
+    final $query = Query<$type>(context)
+      ..values = $bodyParameter
+      ..where((x) => x.$columnName).equalTo($columnName);
+    final $responseField = await $query.updateOne();
+    if ($responseField == null) {
+      return Response.notFound();
+    }
+    return Response.ok($responseField);
+    ''';
+  }
+
+  static String delete(String tableName, String primaryColumnName) {
+    var query = tableName.camelCase + 'Query';
+    var responseField = 'deleted' + tableName.pascalCase;
+    var type = tableName.pascalCase;
+    var columnName = primaryColumnName.camelCase;
+
+    return '''
+    final $query = Query<$type>(context)
+      ..where((x) => x.$columnName).equalTo($columnName);
+    final int $responseField = await $query.delete();
+    if ($responseField == 0) {
+      return Response.notFound();
+    }
+    final response = {"message": "deleted \$$responseField $type"};
+    return Response.ok(response);
+    ''';
+  }
+}
 
 // region [pk]
 class MethodParameter {

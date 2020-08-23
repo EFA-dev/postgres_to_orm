@@ -12,7 +12,7 @@ class Table {
   String get managedObjectName => name.pascalCase;
   String get modelName => '_$managedObjectName';
 
-  Column get primarColumn => columnList.firstWhere((element) => element.primaryKey);
+  Column get primarColumn => columnList.firstWhere((element) => element.primaryKey, orElse: () => null);
 
   Table({this.name});
 }

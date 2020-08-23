@@ -44,16 +44,16 @@ Future<void> main(List<String> arguments) async {
   log.info('*** ${modelClassSetList.length} Model Class created ***');
 
   //* Entity File
-  // log.info('*** Creating Entity Files ***');
-  // var generateEntityResult = await fileGenerator.generateEntityFile(
-  //   config: config,
-  //   tableList: tableList,
-  //   managedObjectSetList: managedObjectSetList,
-  //   modelClassSetList: modelClassSetList,
-  //   packageName: argResults['packageName'],
-  //   outputPath: argResults['entityPath'],
-  // );
-  // log.info('*** ${modelClassSetList.length} Entity File created ***');
+  log.info('*** Creating Entity Files ***');
+  var generateEntityResult = await fileGenerator.generateEntityFile(
+    config: config,
+    tableList: tableList,
+    managedObjectSetList: managedObjectSetList,
+    modelClassSetList: modelClassSetList,
+    packageName: argResults['packageName'],
+    entityPath: argResults['entityPath'],
+  );
+  log.info('*** ${modelClassSetList.length} Entity File created ***');
 
   //* Controller File
   if (config.createController) {

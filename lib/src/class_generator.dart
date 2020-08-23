@@ -120,20 +120,49 @@ class ClassGenerator {
     for (var table in tableList) {
       var classContent = '';
 
-      var controller = generateController(table);
-      var controllerClass = Class((builder) {
-        builder
+      var controller = _generateController(table);
+      var controllerClass = Class((classBuilder) {
+        classBuilder
           ..name = controller.name
           ..extend = refer('ResourceController');
 
+        //* Managed Context Field
+        classBuilder.fields.add(
+          Field(
+            (f) {
+              f.name = 'context';
+              f.type = refer('ManagedContext');
+              f.modifier = FieldModifier.final$;
+              return f;
+            },
+          ),
+        );
+
+        //* Class Constructor
+        classBuilder.constructors.add(
+          Constructor(
+            (constructor) {
+              constructor.requiredParameters.add(
+                Parameter(
+                  (parameter) {
+                    parameter.name = 'context';
+                    parameter.toThis = true;
+                    return parameter;
+                  },
+                ),
+              );
+            },
+          ),
+        );
+
+        //* Methods get, post, put, delete,..
         for (var controllerMethod in controller.methods) {
-          //* get, post, put, delete,..
-          var _method = Method((m) {
-            m.annotations.add(refer(controllerMethod.operation.toString()));
-            m.name = controllerMethod.name;
-            m.returns = refer('Future<Response>');
-            m.modifier = MethodModifier.async;
-            m.body = Code('return Response.ok("");');
+          var _method = Method((methodBuilder) {
+            methodBuilder.annotations.add(refer(controllerMethod.operation.toString()));
+            methodBuilder.name = controllerMethod.name;
+            methodBuilder.returns = refer('Future<Response>');
+            methodBuilder.modifier = MethodModifier.async;
+            methodBuilder.body = Code(controllerMethod.body ?? "");
 
             for (var methodParameter in controllerMethod.parameterList) {
               //* (Bind.path(id) int Id)
@@ -146,15 +175,15 @@ class ClassGenerator {
                   return p;
                 });
 
-                m.requiredParameters.add(parameter);
+                methodBuilder.requiredParameters.add(parameter);
               }
             }
-            return m;
+            return methodBuilder;
           });
-          builder.methods.add(_method);
+          classBuilder.methods.add(_method);
         }
 
-        return builder;
+        return classBuilder;
       });
 
       final emitter = DartEmitter();
@@ -167,7 +196,7 @@ class ClassGenerator {
     return controllerClassList;
   }
 
-  Controller generateController(Table table) {
+  Controller _generateController(Table table) {
     var operationMethodList = <OperationMethod>[];
 
     if (table.primarColumn != null) {
@@ -175,30 +204,38 @@ class ClassGenerator {
       var getAll = OperationMethod(
         name: 'getAll' + table.name.pascalCase.pluralize,
         operation: Operation.getAll(),
+        body: OperationMethodBody.getAllBody(table.name),
       );
       operationMethodList.add(getAll);
 
       //* Get Single
       var getSingle = OperationMethod(
-          name: 'get' + table.name.pascalCase + 'ByID',
-          operation: Operation.getSingle(table.primarColumn.name.camelCase),
-          parameterList: [
-            MethodParameter(
-              bind: Bind.path(table.primarColumn.name),
-              parameterType: table.primarColumn.dataType,
-              parameterName: table.primarColumn.name.camelCase,
-            )
-          ]);
+        name: 'get' + table.name.pascalCase + 'ByID',
+        operation: Operation.getSingle(table.primarColumn.name.camelCase),
+        parameterList: [
+          MethodParameter(
+            bind: Bind.path(table.primarColumn.name),
+            parameterType: table.primarColumn.dataType,
+            parameterName: table.primarColumn.name.camelCase,
+          )
+        ],
+        body: OperationMethodBody.getSingleById(table.name, table.primarColumn.name),
+      );
       operationMethodList.add(getSingle);
 
       //* Post
-      var post = OperationMethod(name: 'add' + table.name.pascalCase, operation: Operation.post(), parameterList: [
-        MethodParameter(
-          bind: Bind.body(),
-          parameterName: table.name.camelCase,
-          parameterType: table.name.pascalCase,
-        )
-      ]);
+      var post = OperationMethod(
+        name: 'add' + table.name.pascalCase,
+        operation: Operation.post(),
+        parameterList: [
+          MethodParameter(
+            bind: Bind.body(),
+            parameterName: table.name.camelCase,
+            parameterType: table.name.pascalCase,
+          )
+        ],
+        body: OperationMethodBody.post(table.name),
+      );
       operationMethodList.add(post);
 
       //* put
@@ -217,6 +254,7 @@ class ClassGenerator {
             parameterType: table.name.pascalCase,
           )
         ],
+        body: OperationMethodBody.put(table.name, table.primarColumn.name),
       );
       operationMethodList.add(put);
 
@@ -231,6 +269,7 @@ class ClassGenerator {
             parameterName: table.primarColumn.name.camelCase,
           )
         ],
+        body: OperationMethodBody.delete(table.name, table.primarColumn.name),
       );
       operationMethodList.add(delete);
     }
