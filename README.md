@@ -1,5 +1,5 @@
 # What does it do?
-This package produces ManagedObjects for Aqueduct ORM. Aqueduct ORM uses PostgreSQL database and it is a very good ORM tool written for it. If you create ManagedObjects yourself, you can create and update tables in your database. But a lot of people like me like to design the database first and then create the ORM classes. Therefore, I developed this package.
+This package produces ManagedObjects, Controller and Tests for Aqueduct. Aqueduct ORM uses PostgreSQL database and it is a very good ORM tool written for it. If you create ManagedObjects yourself, you can create and update tables in your database. But a lot of people like me like to design the database first and then create the ORM classes. Therefore, I developed this package.
 
 <br/>
 
@@ -9,8 +9,10 @@ It uses the database information from the config.yaml file as in Aqueduct projec
 ```
 # config.yaml
 
-outputPath: lib/model
+entityPath: lib/model
 dbSchema: public
+createController: true
+controllerPath: lib/controller
 database:
   username: postgres
   password: postgres
