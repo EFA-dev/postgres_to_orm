@@ -1,4 +1,4 @@
-import 'package:aqueduct/aqueduct.dart';
+import 'package:postgres_to_orm_example/postgres_to_orm_example.dart';
 import 'package:postgres_to_orm_example/model/team.dart';
 
 class TeamController extends ResourceController {
@@ -31,7 +31,8 @@ class TeamController extends ResourceController {
   }
 
   @Operation.put('id')
-  Future<Response> updateTeam(@Bind.path('id') int id, @Bind.body() Team team) async {
+  Future<Response> updateTeam(
+      @Bind.path('id') int id, @Bind.body() Team team) async {
     final teamQuery = Query<Team>(context)
       ..values = team
       ..where((x) => x.id).equalTo(id);

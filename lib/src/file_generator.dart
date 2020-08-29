@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:postgres_to_orm/models/controller_class.dart';
+import 'package:postgres_to_orm/models/test_methods.dart';
 import 'package:postgres_to_orm/src/extensions.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:logging/logging.dart';
@@ -89,9 +90,9 @@ class FileGenerator {
     for (var controllerClass in controllerClassList) {
       var fileName = controllerClass.tableName.snakeCase + '_controller.dart';
 
-      final aqueductImport = "import 'package:aqueduct/aqueduct.dart';";
+      var packageImport = "import 'package:${packageName}/${packageName}.dart';";
 
-      var fileContent = aqueductImport;
+      var fileContent = packageImport;
 
       var import =
           p.join("import 'package:${packageName}/${entityPath.replaceAll(RegExp(r'.*lib/'), '')}/", "${controllerClass.tableName.snakeCase}.dart';");
@@ -101,6 +102,47 @@ class FileGenerator {
 
       final formated = DartFormatter().format(fileContent);
 
+      var filePath = p.join(outputDirectory.path, fileName);
+      var file = File(filePath);
+      await file.writeAsString(formated);
+
+      Logger.root.info('~~~ Completed: ${fileName}');
+    }
+
+    return Future.value(true);
+  }
+
+  Future<bool> generateTestFile({
+    @required BuildConfiguration config,
+    @required List<TestMethods> testMethods,
+    String packageName,
+    String entityPath,
+  }) async {
+    packageName = packageName ?? config.pubspec.name;
+    entityPath = (entityPath ?? config.entityPath);
+    var testPath = './test';
+
+    final harnesImport = "import 'harness/app.dart';";
+
+    var outputDirectory = Directory(testPath);
+    if (await outputDirectory.exists() == false) {
+      await outputDirectory.create(recursive: true);
+    }
+
+    for (var testMethod in testMethods) {
+      var fileContent = '';
+
+      var tableName = testMethod.tableName;
+
+      fileContent += harnesImport;
+
+      var import = p.join("import 'package:${packageName}/${entityPath.replaceAll(RegExp(r'.*lib/'), '')}/", "${tableName.snakeCase}.dart';");
+      fileContent += import;
+
+      fileContent += testMethod.mainMethod;
+      final formated = DartFormatter().format(fileContent);
+
+      var fileName = tableName.snakeCase + '_controller_test.dart';
       var filePath = p.join(outputDirectory.path, fileName);
       var file = File(filePath);
       await file.writeAsString(formated);

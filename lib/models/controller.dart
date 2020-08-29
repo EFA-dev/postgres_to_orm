@@ -73,6 +73,8 @@ class OperationMethod {
 
 // endregion
 
+// region [r]
+
 class OperationMethodBody {
   static String getAllBody(String tableName) {
     var query = tableName.camelCase + 'Query';
@@ -151,6 +153,8 @@ class OperationMethodBody {
     ''';
   }
 }
+
+// endregion
 
 // region [pk]
 class MethodParameter {

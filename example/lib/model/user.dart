@@ -1,18 +1,26 @@
 import 'package:postgres_to_orm_example/postgres_to_orm_example.dart';
 import 'package:postgres_to_orm_example/model/authtoken.dart';
 
-class User extends ManagedObject<_User> implements _User {}
+class User extends ManagedObject<_User> implements _User, ManagedAuthResourceOwner<_User> {
+  @Serialize(input: true, output: false)
+  String password;
+}
 
-class _User {
+class _User extends ResourceOwnerTableDefinition {
+/* This class inherits the following from ManagedAuthenticatable:
+
   @primaryKey
   int id;
 
-  String hashedpassword;
+  @Column(unique: true, indexed: true)
+  String username;
 
+  @Column(omitByDefault: true)
+  String hashedPassword;
+
+  @Column(omitByDefault: true)
   String salt;
 
-  ManagedSet<Authtoken> authtokens;
-
-  @Relate(#usernames)
-  User username;
+  ManagedSet<ManagedAuthToken> tokens;
+ */
 }

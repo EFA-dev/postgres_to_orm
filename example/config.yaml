@@ -1,7 +1,9 @@
 entityPath: lib/model
 dbSchema: public
+createEntity: false
 createController: true
 controllerPath: lib/controller
+createTest: true
 database:
   username: postgres
   password: postgres

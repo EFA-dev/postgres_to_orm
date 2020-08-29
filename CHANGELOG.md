@@ -1,3 +1,7 @@
+## 0.3.0
+  
+- Added basic test method generation for the controller
+  
 ## 0.2.0
   
 - Added basic query to the controller

@@ -1,10 +1,9 @@
-import 'package:aqueduct/aqueduct.dart';
-import 'package:postgres_to_orm_example/channel.dart';
+import 'package:postgres_to_orm_example/postgres_to_orm_example.dart';
 
-void main() async {
-  final app = Application<AqueductChannel>()
-    ..options.configurationFilePath = "config.yaml"
-    ..options.port = 8888;
+Future main() async {
+  final app = Application<PostgresToOrmExampleChannel>()
+      ..options.configurationFilePath = "config.yaml"
+      ..options.port = 8888;
 
   await app.startOnCurrentIsolate();
 

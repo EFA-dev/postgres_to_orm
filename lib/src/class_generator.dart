@@ -2,11 +2,13 @@ import 'package:code_builder/code_builder.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:logging/logging.dart';
 import 'package:meta/meta.dart';
+import 'package:postgres_to_orm/models/controler_test.dart';
 import 'package:postgres_to_orm/models/controller.dart';
 import 'package:postgres_to_orm/models/controller_class.dart';
 import 'package:postgres_to_orm/models/managed_object_set.dart';
 import 'package:postgres_to_orm/models/model_class_set.dart';
 import 'package:postgres_to_orm/models/table.dart';
+import 'package:postgres_to_orm/models/test_methods.dart';
 import 'package:postgres_to_orm/src/build_configuration.dart';
 import 'package:postgres_to_orm/src/extensions.dart';
 
@@ -43,7 +45,7 @@ class ClassGenerator {
     return managedObjectList;
   }
 
-  Future<List<ModelClassSet>> generateModelClass() async {
+  List<ModelClassSet> generateModelClass() {
     var modelClassList = <ModelClassSet>[];
 
     for (var table in tableList) {
@@ -113,8 +115,8 @@ class ClassGenerator {
     return modelClassList;
   }
 
-  // Generate Controller Class as Formated String
-  Future<List<ControllerClass>> generateControllerClass() async {
+  //* Generate Controller Class
+  List<ControllerClass> generateControllerClass() {
     var controllerClassList = <ControllerClass>[];
 
     for (var table in tableList) {
@@ -277,5 +279,184 @@ class ClassGenerator {
     var controller = Controller(name: table.name.pascalCase + 'Controller', methods: operationMethodList);
 
     return controller;
+  }
+
+  //* Generate Controler Test file
+  List<TestMethods> generateTestMethods(String packageName) {
+    var testMetodsList = <TestMethods>[];
+
+    packageName = packageName ?? config.pubspec.name;
+
+    for (var table in tableList) {
+      //* Main Methods
+      var mainMethod = Method((methodBuilder) {
+        methodBuilder.name = 'main';
+        methodBuilder.returns = Reference('void');
+        final emitter = DartEmitter();
+
+        var mainMethodBody = '';
+
+        //* Harness Field
+        var harnesField = Field((fieldbuilder) {
+          fieldbuilder.name = 'harness';
+          fieldbuilder.modifier = FieldModifier.final$;
+          fieldbuilder.assignment = Code('Harness()..install()');
+          return fieldbuilder;
+        });
+        mainMethodBody += harnesField.accept(emitter).toString();
+
+        //* TearDown method
+        var tearDownMethod = Method((tearDownMethodBuilder) {
+          tearDownMethodBuilder.name = 'tearDown';
+
+          tearDownMethodBuilder.requiredParameters.add(Parameter((paramBuilder) {
+            var method = Method((m) {
+              m.modifier = MethodModifier.async;
+              m.body = Code(' await harness.resetData();');
+              return m;
+            });
+
+            paramBuilder.name = method.accept(emitter).toString();
+            return paramBuilder;
+          }));
+
+          return tearDownMethodBuilder;
+        });
+
+        mainMethodBody += tearDownMethod.accept(emitter).toString();
+
+        //* All Test In Controller
+        var controllerTest = _generateControllerTest(table);
+
+        for (var testMethodGroup in controllerTest.testMethodGroupList) {
+          var testGroupMethod = Method((groupMethodBuilder) {
+            var groupMethodBody = '';
+
+            for (var test in testMethodGroup.testMethodList) {
+              var testMethod = Method((testMethodBuilder) {
+                testMethodBuilder.name = 'test';
+
+                var parameter = Parameter((parameterBuilder) {
+                  parameterBuilder.name = '"${test.decription}", ${test.body}';
+                });
+                testMethodBuilder.requiredParameters.add(parameter);
+                return testMethodBuilder;
+              });
+
+              groupMethodBody += testMethod.accept(emitter).toString();
+            }
+
+            groupMethodBuilder.name = 'group';
+            groupMethodBuilder.requiredParameters.add(
+              Parameter(
+                (p) => p..name = '"${testMethodGroup.description}",(){ ${Code(groupMethodBody).toString()} }',
+              ),
+            );
+
+            return groupMethodBuilder;
+          });
+
+          mainMethodBody += testGroupMethod.accept(emitter).toString();
+        }
+
+        methodBuilder.body = Code(mainMethodBody);
+        return methodBuilder;
+      });
+
+      final emitter = DartEmitter();
+      final formated = DartFormatter().format('${mainMethod.accept(emitter)}');
+      testMetodsList.add(TestMethods(tableName: table.name, mainMethod: formated));
+      Logger.root.info('~~~ Completed: ${table.modelName}');
+    }
+
+    return testMetodsList;
+  }
+
+  ControllerTest _generateControllerTest(Table table) {
+    //* GET
+    var getTestMetodList = <TestMethod>[];
+
+    //* Get 200
+    var get200 = TestMethod.get200(table);
+    getTestMetodList.add(get200);
+
+    //* Get 404
+    var get404 = TestMethod.get404();
+    getTestMetodList.add(get404);
+
+    //* Get Single 404
+    var getSingle404 = TestMethod.getSingle404(table);
+    getTestMetodList.add(getSingle404);
+
+    //* Get Single 200 After Post
+    var getSingleAfterPost200 = TestMethod.getSingleAfterPost200(table);
+    getTestMetodList.add(getSingleAfterPost200);
+
+    var getGroup = TestMethodGroup(description: 'GET: ', testMethodList: getTestMetodList);
+
+    //* POST
+    var postTestMethodList = <TestMethod>[];
+
+    //* Post Empty Body 400
+    var postEmptyBody400 = TestMethod.postEmptyBody400(table);
+    postTestMethodList.add(postEmptyBody400);
+
+    //* Post Right Body 200
+    var postRightBody200 = TestMethod.postRightBody200(table);
+    postTestMethodList.add(postRightBody200);
+
+    //* Post Missing Key Body 400
+    var postMissingKeyBody400 = TestMethod.postMissingKeyBody400(table);
+    postTestMethodList.add(postMissingKeyBody400);
+
+    var postGroup = TestMethodGroup(
+      description: 'POST: ',
+      testMethodList: postTestMethodList,
+    );
+
+    //* PUT
+    var putTestMethodList = <TestMethod>[];
+
+    //* Put Empty Body 400
+    var putEmptyBody400 = TestMethod.putEmptyBody400(table);
+    putTestMethodList.add(putEmptyBody400);
+
+    //* Put Right Body 200
+    var putRightBody200 = TestMethod.putRightBody200(table);
+    putTestMethodList.add(putRightBody200);
+
+    var putGroup = TestMethodGroup(
+      description: 'PUT: ',
+      testMethodList: putTestMethodList,
+    );
+
+    //* DELETE
+    var deleteTestMethodList = <TestMethod>[];
+
+    //* Delete 200
+    var delete200 = TestMethod.delete200(table);
+    deleteTestMethodList.add(delete200);
+
+    //* Delete 400
+    var delete400 = TestMethod.delete400(table);
+    deleteTestMethodList.add(delete400);
+
+    //* Delete 404
+    var delete404 = TestMethod.delete404(table);
+    deleteTestMethodList.add(delete404);
+
+    var deleteGroup = TestMethodGroup(
+      description: 'DELETE:',
+      testMethodList: deleteTestMethodList,
+    );
+
+    return ControllerTest(
+      testMethodGroupList: [
+        getGroup,
+        postGroup,
+        putGroup,
+        deleteGroup,
+      ],
+    );
   }
 }

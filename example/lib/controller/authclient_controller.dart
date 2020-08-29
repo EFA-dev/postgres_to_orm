@@ -1,4 +1,4 @@
-import 'package:aqueduct/aqueduct.dart';
+import 'package:postgres_to_orm_example/postgres_to_orm_example.dart';
 import 'package:postgres_to_orm_example/model/authclient.dart';
 
 class AuthclientController extends ResourceController {

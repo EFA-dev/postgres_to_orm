@@ -1,27 +1,43 @@
-import 'dart:io';
-
-import 'package:aqueduct/aqueduct.dart';
-import 'package:aqueduct/managed_auth.dart';
+// import 'package:postgres_to_orm_example/controller/identity_controller.dart';
+// import 'package:postgres_to_orm_example/controller/register_controller.dart';
+import 'package:postgres_to_orm_example/controller/user_controller.dart';
 import 'package:postgres_to_orm_example/model/user.dart';
 import 'package:postgres_to_orm_example/utility/html_template.dart';
+import 'package:postgres_to_orm_example/postgres_to_orm_example.dart';
 
-class AqueductChannel extends ApplicationChannel implements AuthRedirectControllerDelegate {
+/// This type initializes an application.
+///
+/// Override methods in this class to set up routes and initialize services like
+/// database connections. See http://aqueduct.io/docs/http/channel/.
+class PostgresToOrmExampleChannel extends ApplicationChannel implements AuthRedirectControllerDelegate {
   final HTMLRenderer htmlRenderer = HTMLRenderer();
   AuthServer authServer;
   ManagedContext context;
 
+  /// Initialize services in this method.
+  ///
+  /// Implement this method to initialize services, read values from [options]
+  /// and any other initialization required before constructing [entryPoint].
+  ///
+  /// This method is invoked prior to [entryPoint] being accessed.
   @override
   Future prepare() async {
     logger.onRecord.listen((rec) => print("$rec ${rec.error ?? ""} ${rec.stackTrace ?? ""}"));
 
-    final config = AqueductTestConfiguration(options.configurationFilePath);
+    final config = PostgresToOrmExampleConfiguration(options.configurationFilePath);
 
     context = contextWithConnectionInfo(config.database);
 
-    final authStorage = null; //ManagedAuthDelegate<User>(context);
+    final authStorage = ManagedAuthDelegate<User>(context);
     authServer = AuthServer(authStorage);
   }
 
+  /// Construct the request channel.
+  ///
+  /// Return an instance of some [Controller] that will be the initial receiver
+  /// of all [Request]s.
+  ///
+  /// This method is invoked after [prepare].
   @override
   Controller get entryPoint {
     final router = Router();
@@ -31,14 +47,23 @@ class AqueductChannel extends ApplicationChannel implements AuthRedirectControll
 
     router.route("/auth/form").link(() => AuthRedirectController(authServer, delegate: this));
 
-    // /* Create an account */
-    // router.route("/register").link(() => Authorizer.basic(authServer)).link(() => RegisterController(context, authServer));
+    /* Create an account */
+    // router
+    //     .route("/register")
+    //     .link(() => Authorizer.basic(authServer))
+    //     .link(() => RegisterController(context, authServer));
 
     // /* Gets profile for user with bearer token */
-    // router.route("/me").link(() => Authorizer.bearer(authServer)).link(() => IdentityController(context));
+    // router
+    //     .route("/me")
+    //     .link(() => Authorizer.bearer(authServer))
+    //     .link(() => IdentityController(context));
 
     // /* Gets all users or one specific user by id */
-    // router.route("/users/[:id]").link(() => Authorizer.bearer(authServer)).link(() => UserController(context, authServer));
+    // router
+    //     .route("/users/[:id]")
+    //     .link(() => Authorizer.bearer(authServer))
+    //     .link(() => UserController(context, authServer));
 
     return router;
   }
@@ -50,25 +75,14 @@ class AqueductChannel extends ApplicationChannel implements AuthRedirectControll
   ManagedContext contextWithConnectionInfo(DatabaseConfiguration connectionInfo) {
     final dataModel = ManagedDataModel.fromCurrentMirrorSystem();
     final psc = PostgreSQLPersistentStore(
-      connectionInfo.username,
-      connectionInfo.password,
-      connectionInfo.host,
-      connectionInfo.port,
-      connectionInfo.databaseName,
-    );
+        connectionInfo.username, connectionInfo.password, connectionInfo.host, connectionInfo.port, connectionInfo.databaseName);
 
     return ManagedContext(dataModel, psc);
   }
 
   @override
   Future<String> render(
-    AuthRedirectController forController,
-    Uri requestUri,
-    String responseType,
-    String clientID,
-    String state,
-    String scope,
-  ) async {
+      AuthRedirectController forController, Uri requestUri, String responseType, String clientID, String state, String scope) async {
     final map = {"response_type": responseType, "client_id": clientID, "state": state};
 
     map["path"] = requestUri.path;
@@ -80,8 +94,14 @@ class AqueductChannel extends ApplicationChannel implements AuthRedirectControll
   }
 }
 
-class AqueductTestConfiguration extends Configuration {
-  AqueductTestConfiguration(String fileName) : super.fromFile(File(fileName));
+/// An instance of this class represents values from a configuration
+/// file specific to this application.
+///
+/// Configuration files must have key-value for the properties in this class.
+/// For more documentation on configuration files, see
+/// https://pub.dartlang.org/packages/safe_config.
+class PostgresToOrmExampleConfiguration extends Configuration {
+  PostgresToOrmExampleConfiguration(String fileName) : super.fromFile(File(fileName));
 
   DatabaseConfiguration database;
 }

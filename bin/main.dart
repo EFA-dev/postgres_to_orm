@@ -45,20 +45,22 @@ Future<void> main(List<String> arguments) async {
 
   //* Entity File
   log.info('*** Creating Entity Files ***');
-  var generateEntityResult = await fileGenerator.generateEntityFile(
-    config: config,
-    tableList: tableList,
-    managedObjectSetList: managedObjectSetList,
-    modelClassSetList: modelClassSetList,
-    packageName: argResults['packageName'],
-    entityPath: argResults['entityPath'],
-  );
-  log.info('*** ${modelClassSetList.length} Entity File created ***');
+  if (config.createEntity) {
+    var generateEntityResult = fileGenerator.generateEntityFile(
+      config: config,
+      tableList: tableList,
+      managedObjectSetList: managedObjectSetList,
+      modelClassSetList: modelClassSetList,
+      packageName: argResults['packageName'],
+      entityPath: argResults['entityPath'],
+    );
+    log.info('*** ${modelClassSetList.length} Entity File created ***');
+  }
 
   //* Controller File
   if (config.createController) {
     log.info('*** Creating Controller Files ***');
-    var controllerClassList = await classGenerator.generateControllerClass();
+    var controllerClassList = classGenerator.generateControllerClass();
 
     var generateControllerResult = fileGenerator.generateControllerFile(
       config: config,
@@ -68,6 +70,19 @@ Future<void> main(List<String> arguments) async {
       entityPath: argResults['entityPath'],
     );
     log.info('*** ${tableList.length} Controller File created ***');
+  }
+
+  if (config.createTest) {
+    log.info('*** Creating Test Files ***');
+    var testMethodsList = classGenerator.generateTestMethods(argResults['packageName']);
+
+    var generateTestResult = fileGenerator.generateTestFile(
+      config: config,
+      testMethods: testMethodsList,
+      packageName: argResults['packageName'],
+    );
+
+    log.info('*** ${tableList.length} Test File created ***');
   }
 
   await connection.close();
